@@ -7,17 +7,22 @@ export async function getCommentsByPlace(placeId: number) {
   });
 }
 
-export async function createCommentForPlace(params: {
+type CreateCommentParams = {
   placeId: number;
   authorName: string;
-  text: string;
-}) {
-  const { placeId, authorName, text } = params;
+  text: string | null;
+  rating?: number | null;
+};
+
+export async function createCommentForPlace(params: CreateCommentParams) {
+  const { placeId, authorName, text, rating } = params;
   return prisma.comment.create({
     data: {
       placeId,
       authorName,
-      text,
+      // Prisma тип поля text: String? — допускает null
+      text: (text ?? null) as unknown as string,
+      rating: rating ?? null,
     },
   });
 }

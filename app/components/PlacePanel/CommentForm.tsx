@@ -13,6 +13,7 @@ type CommentFormProps = {
 export function CommentForm({ placeId, onCommentAdded }: CommentFormProps) {
   const [authorName, setAuthorName] = useState("");
   const [text, setText] = useState("");
+  const [rating, setRating] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -21,8 +22,18 @@ export function CommentForm({ placeId, onCommentAdded }: CommentFormProps) {
     setError(null);
     const trimmedName = authorName.trim();
     const trimmedText = text.trim();
-    if (!trimmedName || !trimmedText) {
-      setError("Заполните имя и комментарий.");
+    const numericRating =
+      typeof rating === "number" && Number.isFinite(rating)
+        ? Math.round(rating)
+        : null;
+
+    if (!trimmedName) {
+      setError("Укажите имя.");
+      return;
+    }
+
+    if (!trimmedText && (numericRating === null || numericRating < 1 || numericRating > 5)) {
+      setError("Нужен либо текст комментария, либо рейтинг от 1 до 5.");
       return;
     }
     setLoading(true);
@@ -33,7 +44,13 @@ export function CommentForm({ placeId, onCommentAdded }: CommentFormProps) {
         body: JSON.stringify({
           placeId,
           authorName: trimmedName,
-          text: trimmedText,
+          text: trimmedText || null,
+          rating:
+            numericRating !== null &&
+            numericRating >= 1 &&
+            numericRating <= 5
+              ? numericRating
+              : null,
         }),
       });
       const data = await res.json();
@@ -44,6 +61,7 @@ export function CommentForm({ placeId, onCommentAdded }: CommentFormProps) {
       onCommentAdded(data);
       setAuthorName("");
       setText("");
+      setRating(null);
     } catch {
       setError("Ошибка сети. Попробуйте ещё раз.");
     } finally {
@@ -62,6 +80,36 @@ export function CommentForm({ placeId, onCommentAdded }: CommentFormProps) {
         disabled={loading}
         autoComplete="name"
       />
+      <div className="flex flex-col gap-1">
+        <span className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
+          Оценка заведения
+        </span>
+        <div className="flex items-center gap-1">
+          {[1, 2, 3, 4, 5].map((star) => {
+            const active =
+              rating !== null && rating >= star;
+            return (
+              <button
+                key={star}
+                type="button"
+                onClick={() => setRating(star)}
+                disabled={loading}
+                className={`text-xl transition-colors ${
+                  active
+                    ? "text-yellow-400"
+                    : "text-zinc-300 dark:text-zinc-600"
+                }`}
+                aria-label={`Оценка ${star} из 5`}
+              >
+                ★
+              </button>
+            );
+          })}
+          <span className="ml-2 text-xs text-zinc-500 dark:text-zinc-400">
+            (можно оставить только рейтинг без текста)
+          </span>
+        </div>
+      </div>
       <div className="flex flex-col gap-1">
         <label
           htmlFor="comment-text"

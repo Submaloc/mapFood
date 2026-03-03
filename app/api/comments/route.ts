@@ -23,7 +23,12 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  let body: { placeId: number; authorName: string; text: string };
+  let body: {
+    placeId: number;
+    authorName: string;
+    text?: string;
+    rating?: number | null;
+  };
   try {
     body = await request.json();
   } catch {
@@ -33,23 +38,42 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const { placeId, authorName, text } = body;
+  const { placeId, authorName, text, rating } = body;
   if (
     typeof placeId !== "number" ||
-    typeof authorName !== "string" ||
-    typeof text !== "string"
+    typeof authorName !== "string"
   ) {
     return NextResponse.json(
-      { error: "placeId (number), authorName (string), text (string) required" },
+      {
+        error:
+          "placeId (number) и authorName (string) обязательны; text (string) и rating (number 1–5) — опциональны",
+      },
       { status: 400 }
     );
   }
 
   const trimmedName = authorName.trim();
-  const trimmedText = text.trim();
-  if (!trimmedName || !trimmedText) {
+  const trimmedText =
+    typeof text === "string" ? text.trim() : "";
+
+  const numericRating =
+    typeof rating === "number" && Number.isFinite(rating)
+      ? Math.round(rating)
+      : null;
+
+  if (!trimmedName) {
     return NextResponse.json(
-      { error: "authorName and text must be non-empty" },
+      { error: "authorName must be non-empty" },
+      { status: 400 }
+    );
+  }
+
+  if (!trimmedText && (numericRating === null || numericRating < 1 || numericRating > 5)) {
+    return NextResponse.json(
+      {
+        error:
+          "Нужен либо непустой текст комментария, либо рейтинг от 1 до 5.",
+      },
       { status: 400 }
     );
   }
@@ -62,7 +86,11 @@ export async function POST(request: NextRequest) {
   const comment = await createCommentForPlace({
     placeId,
     authorName: trimmedName,
-    text: trimmedText,
+    text: trimmedText || null,
+    rating:
+      numericRating !== null && numericRating >= 1 && numericRating <= 5
+        ? numericRating
+        : null,
   });
   return NextResponse.json(comment);
 }

@@ -34,7 +34,8 @@ model Comment {
   id         Int      @id @default(autoincrement())
   placeId    Int
   authorName String
-  text       String
+  text       String?
+  rating     Int?
   createdAt  DateTime @default(now())
 
   place      Place    @relation(fields: [placeId], references: [id], onDelete: Cascade)

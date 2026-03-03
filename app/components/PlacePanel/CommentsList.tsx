@@ -84,12 +84,27 @@ export function CommentsList({ placeId, newComment }: CommentsListProps) {
           key={c.id}
           className="rounded-lg border border-zinc-200 bg-zinc-50 p-3 dark:border-zinc-700 dark:bg-zinc-800/50"
         >
-          <p className="font-medium text-zinc-900 dark:text-zinc-100">
-            {c.authorName}
-          </p>
-          <p className="mt-1 text-sm text-zinc-700 dark:text-zinc-300">
-            {c.text}
-          </p>
+          <div className="flex items-center justify-between gap-2">
+            <p className="font-medium text-zinc-900 dark:text-zinc-100">
+              {c.authorName}
+            </p>
+            {typeof c.rating === "number" && c.rating >= 1 && c.rating <= 5 && (
+              <div className="flex items-center gap-1">
+                <span className="text-sm text-yellow-400">
+                  {"★".repeat(c.rating)}
+                  {"☆".repeat(5 - c.rating)}
+                </span>
+                <span className="text-xs text-zinc-500 dark:text-zinc-400">
+                  {c.rating.toFixed(1).replace(".0", "")}/5
+                </span>
+              </div>
+            )}
+          </div>
+          {c.text && (
+            <p className="mt-1 text-sm text-zinc-700 dark:text-zinc-300">
+              {c.text}
+            </p>
+          )}
           <p className="mt-2 text-xs text-zinc-500 dark:text-zinc-400">
             {formatDate(c.createdAt)}
           </p>

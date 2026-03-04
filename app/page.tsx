@@ -17,6 +17,8 @@ const Map = dynamic(() => import("@/app/components/Map/Map").then((m) => ({ defa
 export default function Home() {
   const [places, setPlaces] = useState<PlaceListItem[]>([]);
   const [selectedPlace, setSelectedPlace] = useState<PlaceListItem | null>(null);
+  const [isAddingPlace, setIsAddingPlace] = useState(false);
+  const [newPlaceCoords, setNewPlaceCoords] = useState<{ lat: number; lng: number } | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [syncing, setSyncing] = useState(false);
@@ -79,12 +81,74 @@ export default function Home() {
     }
   }, [fetchPlaces]);
 
+  const handleMapClickForNewPlace = useCallback(
+    (lat: number, lng: number) => {
+      if (!isAddingPlace) return;
+      setNewPlaceCoords({ lat, lng });
+      setSelectedPlace(null);
+    },
+    [isAddingPlace]
+  );
+
+  const handleCreateManualPlace = useCallback(
+    async (params: { name: string; address?: string }) => {
+      if (!newPlaceCoords) return;
+      const { name, address } = params;
+      try {
+        const res = await fetch("/api/places", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            name,
+            address: address ?? undefined,
+            latitude: newPlaceCoords.lat,
+            longitude: newPlaceCoords.lng,
+          }),
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          throw new Error(data.error ?? "Не удалось создать место");
+        }
+        // Добавляем новое место в список и выделяем его
+        setPlaces((prev) => [...prev, data]);
+        setSelectedPlace(data);
+        setIsAddingPlace(false);
+        setNewPlaceCoords(null);
+      } catch (e) {
+        setError(e instanceof Error ? e.message : "Ошибка создания места");
+      }
+    },
+    [newPlaceCoords]
+  );
+
+  const handleCancelCreateManualPlace = useCallback(() => {
+    setIsAddingPlace(false);
+    setNewPlaceCoords(null);
+  }, []);
+
   return (
     <div className="min-h-screen px-4 py-6">
       <div className="mx-auto flex max-w-6xl flex-col gap-4">
         <div className="rounded-2xl border border-zinc-200/40 bg-white/90 p-3 shadow-lg md:p-5">
           <div className="grid gap-4 md:grid-cols-[minmax(0,2fr)_minmax(320px,1fr)]">
             <main className="relative h-[360px] rounded-xl bg-zinc-100 md:h-[520px]">
+              <div className="pointer-events-none absolute left-14 top-3 z-[500] flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsAddingPlace((prev) => !prev);
+                    setNewPlaceCoords(null);
+                  }}
+                  className={`pointer-events-auto flex h-9 items-center justify-center rounded-full px-3 text-sm font-medium text-white shadow-md transition-colors ${
+                    isAddingPlace ? "bg-[#f44173]" : "bg-zinc-800"
+                  }`}
+                >
+                  <span className="mr-1 text-lg leading-none">＋</span>
+                  <span className="hidden sm:inline">
+                    {isAddingPlace ? "Клик по карте…" : "Добавить место"}
+                  </span>
+                </button>
+              </div>
               {loading ? (
                 <div className="flex h-full items-center justify-center">
                   <span className="text-zinc-500">Загрузка карты…</span>
@@ -107,11 +171,28 @@ export default function Home() {
                 <Map
                   places={places}
                   onPlaceSelect={setSelectedPlace}
+                  onMapClickForNewPlace={handleMapClickForNewPlace}
                 />
               )}
             </main>
             <aside className="flex min-h-[260px] flex-col rounded-xl bg-[#292d32] text-zinc-100">
-              {selectedPlace ? (
+              {newPlaceCoords && isAddingPlace ? (
+                <div className="flex h-full flex-col justify-between p-4 text-left text-zinc-100">
+                  <div className="space-y-3">
+                    <h2 className="text-lg font-semibold">Новое место</h2>
+                    <p className="text-sm text-zinc-300">
+                      Вы выбрали точку на карте. Укажите необходимую информацию.
+                    </p>
+                    <ManualPlaceForm
+                      onSubmit={handleCreateManualPlace}
+                      onCancel={handleCancelCreateManualPlace}
+                    />
+                  </div>
+                  <p className="mt-4 text-xs text-zinc-400">
+                    Координаты: {newPlaceCoords.lat.toFixed(6)}, {newPlaceCoords.lng.toFixed(6)}
+                  </p>
+                </div>
+              ) : selectedPlace ? (
                 <div className="h-full overflow-hidden p-2 md:p-3">
                   <PlacePanel
                     place={selectedPlace}
@@ -147,5 +228,88 @@ export default function Home() {
         </div>
       </div>
     </div>
+  );
+}
+
+type ManualPlaceFormProps = {
+  onSubmit: (data: { name: string; address?: string }) => void;
+  onCancel: () => void;
+};
+
+function ManualPlaceForm({ onSubmit, onCancel }: ManualPlaceFormProps) {
+  const [name, setName] = useState("");
+  const [address, setAddress] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    const trimmedName = name.trim();
+    const trimmedAddress = address.trim();
+    if (!trimmedName) {
+      setError("Укажите название места.");
+      return;
+    }
+    setSubmitting(true);
+    setError(null);
+    try {
+      await onSubmit({
+        name: trimmedName,
+        address: trimmedAddress || undefined,
+      });
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="flex flex-col gap-3">
+      <div className="flex flex-col gap-1 text-left">
+        <label className="text-sm font-medium text-zinc-100">
+          Название места
+        </label>
+        <input
+          type="text"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          placeholder="Например, Кафе рядом с офисом"
+          disabled={submitting}
+          className="w-full rounded-lg border border-zinc-600 bg-[#1f2328] px-3 py-2 text-sm text-white placeholder:text-zinc-500 focus:border-zinc-300 focus:outline-none focus:ring-1 focus:ring-zinc-300"
+        />
+      </div>
+      <div className="flex flex-col gap-1 text-left">
+        <label className="text-sm font-medium text-zinc-100">
+          Адрес (необязательно)
+        </label>
+        <input
+          type="text"
+          value={address}
+          onChange={(e) => setAddress(e.target.value)}
+          placeholder="Улица, дом"
+          disabled={submitting}
+          className="w-full rounded-lg border border-zinc-600 bg-[#1f2328] px-3 py-2 text-sm text-white placeholder:text-zinc-500 focus:border-zinc-300 focus:outline-none focus:ring-1 focus:ring-zinc-300"
+        />
+      </div>
+      {error && (
+        <p className="text-sm text-red-400">{error}</p>
+      )}
+      <div className="mt-1 flex gap-2">
+        <button
+          type="submit"
+          disabled={submitting}
+          className="flex-1 rounded-lg bg-[#f44173] px-3 py-2 text-sm font-medium text-white hover:bg-[#e03464] disabled:opacity-50"
+        >
+          {submitting ? "Сохранение…" : "Сохранить место"}
+        </button>
+        <button
+          type="button"
+          onClick={onCancel}
+          disabled={submitting}
+          className="rounded-lg border border-zinc-500 px-3 py-2 text-sm font-medium text-zinc-100 hover:bg-[#383d45]"
+        >
+          Отмена
+        </button>
+      </div>
+    </form>
   );
 }

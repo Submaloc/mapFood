@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { MapContainer, TileLayer } from "react-leaflet";
+import { MapContainer, TileLayer, useMapEvents } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import type { PlaceListItem } from "@/app/types/place";
 import { MapMarkers } from "./MapMarkers";
@@ -18,9 +18,25 @@ const MARKER_ICON_URLS = {
 type MapProps = {
   places: PlaceListItem[];
   onPlaceSelect: (place: PlaceListItem) => void;
+  onMapClickForNewPlace?: (lat: number, lng: number) => void;
 };
 
-export function Map({ places, onPlaceSelect }: MapProps) {
+function MapClickHandler({
+  onMapClickForNewPlace,
+}: {
+  onMapClickForNewPlace?: (lat: number, lng: number) => void;
+}) {
+  useMapEvents({
+    click(e) {
+      if (onMapClickForNewPlace) {
+        onMapClickForNewPlace(e.latlng.lat, e.latlng.lng);
+      }
+    },
+  });
+  return null;
+}
+
+export function Map({ places, onPlaceSelect, onMapClickForNewPlace }: MapProps) {
   const [iconsReady, setIconsReady] = useState(false);
 
   useEffect(() => {
@@ -57,6 +73,9 @@ export function Map({ places, onPlaceSelect }: MapProps) {
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
         <MapMarkers places={places} onPlaceSelect={onPlaceSelect} />
+        {onMapClickForNewPlace && (
+          <MapClickHandler onMapClickForNewPlace={onMapClickForNewPlace} />
+        )}
       </MapContainer>
     </div>
   );

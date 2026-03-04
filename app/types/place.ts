@@ -6,6 +6,7 @@ export type Place = {
   latitude: number;
   longitude: number;
   externalId: string | null;
+  isManual: boolean;
   createdAt: string;
   updatedAt: string;
   comments?: CommentInPlace[];
@@ -19,6 +20,7 @@ export type PlaceListItem = {
   latitude: number;
   longitude: number;
   description: string | null;
+  isManual?: boolean;
   _count?: { comments: number };
 };
 

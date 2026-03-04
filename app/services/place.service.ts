@@ -128,7 +128,7 @@ export async function getPlaceByIdWithComments(id: number) {
 }
 
 export async function getPlacesForMap() {
-  return prisma.place.findMany({
+  const places = await prisma.place.findMany({
     orderBy: { name: "asc" },
     select: {
       id: true,
@@ -137,8 +137,46 @@ export async function getPlacesForMap() {
       latitude: true,
       longitude: true,
       description: true,
+      isManual: true,
       _count: { select: { comments: true } },
     },
+  });
+
+  const placeIds = places.map((p) => p.id);
+  if (placeIds.length === 0) return places;
+
+  const ratingAgg = await prisma.comment.groupBy({
+    by: ["placeId"],
+    where: {
+      placeId: { in: placeIds },
+      rating: { not: null },
+    },
+    _avg: { rating: true },
+    _count: { rating: true },
+  });
+
+  const ratingByPlaceId = new Map<
+    number,
+    { averageRating: number; ratingCount: number }
+  >();
+  for (const row of ratingAgg) {
+    const avg = row._avg.rating;
+    const count = row._count.rating;
+    if (avg != null && count > 0) {
+      ratingByPlaceId.set(row.placeId, {
+        averageRating: Math.round(avg * 10) / 10,
+        ratingCount: count,
+      });
+    }
+  }
+
+  return places.map((p) => {
+    const rating = ratingByPlaceId.get(p.id);
+    return {
+      ...p,
+      averageRating: rating?.averageRating ?? null,
+      ratingCount: rating?.ratingCount ?? 0,
+    };
   });
 }
 
@@ -146,6 +184,24 @@ export async function deletePlaceById(id: number) {
   // comments удалятся каскадно благодаря onDelete: Cascade в схеме Prisma
   return prisma.place.delete({
     where: { id },
+  });
+}
+
+export async function createManualPlace(params: {
+  name: string;
+  address?: string | null;
+  latitude: number;
+  longitude: number;
+}) {
+  const { name, address, latitude, longitude } = params;
+  return prisma.place.create({
+    data: {
+      name,
+      address: address ?? null,
+      latitude,
+      longitude,
+      isManual: true,
+    },
   });
 }
 

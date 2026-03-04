@@ -24,6 +24,9 @@ model Place {
   // Внешний идентификатор из Yandex API 
   externalId  String?   @unique
 
+  // Место, добавленное вручную пользователем
+  isManual    Boolean   @default(false)
+
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 

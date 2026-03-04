@@ -41,6 +41,25 @@ export default function Home() {
     fetchPlaces();
   }, [fetchPlaces]);
 
+  const handleDeletePlace = useCallback(
+    async (placeId: number) => {
+      try {
+        const res = await fetch(`/api/places?id=${placeId}`, {
+          method: "DELETE",
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          throw new Error(data.error ?? "Не удалось удалить место");
+        }
+        setPlaces((prev) => prev.filter((p) => p.id !== placeId));
+        setSelectedPlace(null);
+      } catch (e) {
+        setError(e instanceof Error ? e.message : "Ошибка удаления места");
+      }
+    },
+    []
+  );
+
   const runSync = useCallback(async () => {
     setSyncing(true);
     setSyncMessage(null);
@@ -91,6 +110,7 @@ export default function Home() {
             <PlacePanel
               place={selectedPlace}
               onClose={() => setSelectedPlace(null)}
+              onDelete={handleDeletePlace}
             />
           </div>
         ) : (
@@ -101,7 +121,7 @@ export default function Home() {
                 type="button"
                 onClick={runSync}
                 disabled={syncing}
-                className="rounded-lg bg-amber-600 px-4 py-2 text-sm font-medium text-white hover:bg-amber-500 disabled:opacity-50"
+                className="rounded-lg bg-[#f44173] px-4 py-2 text-sm font-medium text-white hover:bg-[#e03464] disabled:opacity-50"
               >
                 {syncing ? "Загрузка…" : "Загрузить заведения с карты"}
               </button>

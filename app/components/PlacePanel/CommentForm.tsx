@@ -106,7 +106,7 @@ export function CommentForm({ placeId, onCommentAdded }: CommentFormProps) {
             );
           })}
           <span className="ml-2 text-xs text-zinc-500 dark:text-zinc-400">
-            (можно оставить только рейтинг без текста)
+            
           </span>
         </div>
       </div>

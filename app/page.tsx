@@ -80,61 +80,72 @@ export default function Home() {
   }, [fetchPlaces]);
 
   return (
-    <div className="flex h-dvh w-full flex-col md:flex-row">
-      <main className="relative flex-1 min-h-[50vh] md:min-h-full">
-        {loading ? (
-          <div className="flex h-full items-center justify-center bg-zinc-100 dark:bg-zinc-800">
-            <span className="text-zinc-500">Загрузка карты…</span>
-          </div>
-        ) : error ? (
-          <div className="flex h-full flex-col items-center justify-center gap-2 bg-zinc-100 p-4 text-center dark:bg-zinc-800">
-            <p className="text-zinc-600 dark:text-zinc-400">{error}</p>
-            <button
-              type="button"
-              onClick={() => { setLoading(true); fetchPlaces(); }}
-              className="rounded-lg bg-zinc-800 px-4 py-2 text-sm text-white hover:bg-zinc-700 dark:bg-zinc-200 dark:text-zinc-900 dark:hover:bg-zinc-300"
-            >
-              Повторить
-            </button>
-          </div>
-        ) : (
-          <Map
-            places={places}
-            onPlaceSelect={setSelectedPlace}
-          />
-        )}
-      </main>
-      <aside className="w-full border-t border-zinc-200 bg-white md:w-[400px] md:min-w-[320px] md:border-t-0 md:border-l dark:border-zinc-700 dark:bg-zinc-900">
-        {selectedPlace ? (
-          <div className="h-full overflow-hidden p-2 md:p-4">
-            <PlacePanel
-              place={selectedPlace}
-              onClose={() => setSelectedPlace(null)}
-              onDelete={handleDeletePlace}
-            />
-          </div>
-        ) : (
-          <div className="flex h-full flex-col items-center justify-center gap-4 p-4 text-center text-zinc-500 dark:text-zinc-400">
-            <p className="text-sm">Выберите точку на карте, чтобы увидеть информацию и комментарии.</p>
-            <div className="flex flex-col gap-2">
-              <button
-                type="button"
-                onClick={runSync}
-                disabled={syncing}
-                className="rounded-lg bg-[#f44173] px-4 py-2 text-sm font-medium text-white hover:bg-[#e03464] disabled:opacity-50"
-              >
-                {syncing ? "Загрузка…" : "Загрузить заведения с карты"}
-              </button>
-              {syncMessage && (
-                <p className="text-xs text-zinc-600 dark:text-zinc-300">{syncMessage}</p>
+    <div className="min-h-screen px-4 py-6">
+      <div className="mx-auto flex max-w-6xl flex-col gap-4">
+        <div className="rounded-2xl border border-zinc-200/40 bg-white/90 p-3 shadow-lg md:p-5">
+          <div className="grid gap-4 md:grid-cols-[minmax(0,2fr)_minmax(320px,1fr)]">
+            <main className="relative h-[360px] rounded-xl bg-zinc-100 md:h-[520px]">
+              {loading ? (
+                <div className="flex h-full items-center justify-center">
+                  <span className="text-zinc-500">Загрузка карты…</span>
+                </div>
+              ) : error ? (
+                <div className="flex h-full flex-col items-center justify-center gap-2 p-4 text-center">
+                  <p className="text-zinc-600">{error}</p>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setLoading(true);
+                      fetchPlaces();
+                    }}
+                    className="rounded-lg bg-zinc-800 px-4 py-2 text-sm text-white hover:bg-zinc-700"
+                  >
+                    Повторить
+                  </button>
+                </div>
+              ) : (
+                <Map
+                  places={places}
+                  onPlaceSelect={setSelectedPlace}
+                />
               )}
-            </div>
-            <p className="text-xs">
-              Данные берутся из БД. Кнопка подтягивает заведения (кафе, рестораны) из OpenStreetMap вокруг станций метро.
-            </p>
+            </main>
+            <aside className="flex min-h-[260px] flex-col rounded-xl bg-[#292d32] text-zinc-100">
+              {selectedPlace ? (
+                <div className="h-full overflow-hidden p-2 md:p-3">
+                  <PlacePanel
+                    place={selectedPlace}
+                    onClose={() => setSelectedPlace(null)}
+                    onDelete={handleDeletePlace}
+                  />
+                </div>
+              ) : (
+                <div className="flex h-full flex-col items-center justify-center gap-4 p-4 text-center text-zinc-200">
+                  <p className="text-sm">
+                    Выберите точку на карте, чтобы увидеть/добавить комментарии и рейтинги.
+                  </p>
+                  <div className="flex flex-col gap-2">
+                    <button
+                      type="button"
+                      onClick={runSync}
+                      disabled={syncing}
+                      className="rounded-lg bg-[#f44173] px-4 py-2 text-sm font-medium text-white hover:bg-[#e03464] disabled:opacity-50"
+                    >
+                      {syncing ? "Загрузка…" : "Загрузить заведения с карты"}
+                    </button>
+                    {syncMessage && (
+                      <p className="text-xs text-zinc-200/80">{syncMessage}</p>
+                    )}
+                  </div>
+                  <p className="text-xs text-zinc-300">
+                    Синхронизация для повторного обращения к API за местами на карте
+                  </p>
+                </div>
+              )}
+            </aside>
           </div>
-        )}
-      </aside>
+        </div>
+      </div>
     </div>
   );
 }

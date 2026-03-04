@@ -20,14 +20,14 @@ export function PlacePanel({ place, onClose, onDelete }: PlacePanelProps) {
   const [lastAddedComment, setLastAddedComment] = useState<Comment | null>(null);
 
   return (
-    <div className="flex h-full flex-col overflow-hidden rounded-lg border border-zinc-200 bg-white shadow-lg dark:border-zinc-700 dark:bg-zinc-900">
-      <div className="flex items-center justify-between gap-2 border-b border-zinc-200 p-4 dark:border-zinc-700">
+    <div className="flex h-full flex-col overflow-hidden rounded-xl border border-[#3a3f46]/40 bg-[#292d32] shadow-lg">
+      <div className="flex items-center justify-between gap-2 border-b border-[#3a3f46]/40 p-4">
         <div className="flex min-w-0 flex-1 flex-col">
-          <h2 className="truncate text-lg font-semibold text-zinc-900 dark:text-zinc-100">
+          <h2 className="truncate text-lg font-semibold text-white">
             {place.name}
           </h2>
           {place.address && (
-            <p className="mt-0.5 truncate text-xs text-zinc-500 dark:text-zinc-400">
+            <p className="mt-0.5 truncate text-xs text-zinc-300">
               {place.address}
             </p>
           )}
@@ -54,7 +54,7 @@ export function PlacePanel({ place, onClose, onDelete }: PlacePanelProps) {
             <button
               type="button"
               onClick={onClose}
-              className="rounded p-1 text-zinc-500 hover:bg-zinc-100 hover:text-zinc-700 dark:hover:bg-zinc-800 dark:hover:text-zinc-300"
+              className="rounded p-1 text-zinc-300 hover:bg-zinc-800 hover:text-white"
               aria-label="Закрыть"
             >
               ×
@@ -64,7 +64,7 @@ export function PlacePanel({ place, onClose, onDelete }: PlacePanelProps) {
       </div>
       <div className="flex-1 overflow-y-auto p-4">
         <section className="mb-6">
-          <h3 className="mb-2 text-sm font-medium text-zinc-700 dark:text-zinc-300">
+          <h3 className="mb-2 text-sm font-medium text-zinc-100">
             Комментарии
           </h3>
           <CommentsList
@@ -73,7 +73,7 @@ export function PlacePanel({ place, onClose, onDelete }: PlacePanelProps) {
           />
         </section>
         <section>
-          <h3 className="mb-2 text-sm font-medium text-zinc-700 dark:text-zinc-300">
+          <h3 className="mb-2 text-sm font-medium text-zinc-100">
             Оставить комментарий
           </h3>
           <CommentForm

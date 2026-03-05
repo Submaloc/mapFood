@@ -1,36 +1,81 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+## MapFood — запуск проекта локально
 
-## Getting Started
+### 1. Клонирование и зависимости
 
-First, run the development server:
+- Клонировать репозиторий и перейти в папку проекта:
+
+```bash
+git clone <REPO_URL>
+cd mapfood
+```
+
+- Установить зависимости:
+
+```bash
+npm install
+```
+
+### 2. Настройка базы данных
+
+- Создать БД и пользователя (пример MySQL):
+
+```sql
+CREATE DATABASE mapfood CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+CREATE USER 'user_name'@'localhost' IDENTIFIED BY 'user_pass';
+GRANT ALL PRIVILEGES ON mapfood.* TO 'user_name'@'localhost';
+FLUSH PRIVILEGES;
+```
+
+- Создать в корне проекта файл `.env`:
+
+```env
+DATABASE_URL="mysql://user_name:user_pass@localhost:3306/mapfood"
+```
+
+При других настройках заменить имя БД, пользователя, пароль, хост и порт на свои.
+
+### 3. Миграции Prisma
+
+В папке проекта выполнить:
+
+```bash
+npx prisma migrate dev
+```
+
+Это создаст все необходимые таблицы. Если Prisma жалуется на права (`ALTER`, `CREATE`, `DROP`, `REFERENCES`), их нужно выдать пользователю БД.
+
+При необходимости можно дополнительно сгенерировать Prisma Client:
+
+```bash
+npx prisma generate
+```
+
+### 4. Запуск приложения
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### 5. Как пользоваться приложением
 
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- Слева — карта с точками заведений.
+- Справа — панель выбранного места:
+  - название и адрес;
+  - средний рейтинг и количество оценок;
+  - список комментариев с рейтингами и датами;
+  - форма добавления комментария и/или рейтинга;
+  - крестик для удаления комментария;
+  - кнопка **«Удалить»** для удаления места (вместе с комментариями и рейтингами).
+- Над картой:
+  - фильтр по минимальному среднему рейтингу (**«Рейтинг от: …»**);
+  - кнопка **«Добавить место»**:
+    - нажать кнопку;
+    - кликнуть по карте в нужной точке;
+    - справа заполнить название и (по желанию) адрес, затем сохранить.
+- Кнопка **«Загрузить заведения с карты»** в панели:
+  - подтягивает кафе/рестораны вокруг нескольких станций метро в Минске через Overpass API;
+  - сохраняет их в БД; повторные запуски обновляют данные;
+  - если Overpass временно перегружен, отображается короткое сообщение вида  
+    **«Сервис временно недоступен (код 504).»** — можно подождать и повторить попытку.

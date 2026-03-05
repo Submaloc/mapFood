@@ -20,7 +20,6 @@ export async function createCommentForPlace(params: CreateCommentParams) {
     data: {
       placeId,
       authorName,
-      // Prisma тип поля text: String? — допускает null
       text: (text ?? null) as unknown as string,
       rating: rating ?? null,
     },

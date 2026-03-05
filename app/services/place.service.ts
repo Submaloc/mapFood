@@ -181,7 +181,6 @@ export async function getPlacesForMap() {
 }
 
 export async function deletePlaceById(id: number) {
-  // comments удалятся каскадно благодаря onDelete: Cascade в схеме Prisma
   return prisma.place.delete({
     where: { id },
   });

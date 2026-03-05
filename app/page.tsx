@@ -87,7 +87,12 @@ export default function Home() {
       const res = await fetch("/api/sync-places", { method: "POST" });
       const data = await res.json();
       if (!res.ok) {
-        setSyncMessage([data.error, data.details].filter(Boolean).join(" — ") || "Ошибка синхронизации");
+        const code = res.status || data.code;
+        setSyncMessage(
+          `Сервис временно недоступен${
+            typeof code === "number" ? ` (код ${code})` : ""
+          }.`
+        );
         return;
       }
       setSyncMessage(data.message ?? `Загружено: создано ${data.created}, обновлено ${data.updated}.`);
@@ -127,7 +132,7 @@ export default function Home() {
         if (!res.ok) {
           throw new Error(data.error ?? "Не удалось создать место");
         }
-        // Добавляем новое место в список и выделяем его
+        
         setPlaces((prev) => [
           ...prev,
           { ...data, averageRating: null, ratingCount: 0 },
@@ -166,7 +171,7 @@ export default function Home() {
             <main className="relative h-[360px] rounded-xl bg-zinc-100 md:h-[520px]">
               <div className="pointer-events-none absolute left-14 top-3 z-[500] flex flex-col gap-2">
                 <div className="pointer-events-auto flex flex-wrap items-center gap-1.5">
-                  <span className="mr-1 text-xs font-medium text-zinc-600">
+                  <span className="mr-1 text-xs font-bold text-zinc-900">
                     Рейтинг от:
                   </span>
                   {[1, 2, 3, 4, 5].map((star) => (

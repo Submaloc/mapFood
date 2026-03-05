@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { CommentForm } from "./CommentForm";
 import { CommentsList } from "./CommentsList";
 import type { Comment } from "@/app/types/comment";
@@ -8,16 +8,28 @@ type PlaceForPanel = {
   id: number;
   name: string;
   address?: string | null;
+  averageRating?: number | null;
+  ratingCount?: number;
 };
 
 type PlacePanelProps = {
   place: PlaceForPanel;
   onClose?: () => void;
   onDelete?: (placeId: number) => void;
+  
+  onPlaceDataChanged?: () => void | Promise<void>;
 };
 
-export function PlacePanel({ place, onClose, onDelete }: PlacePanelProps) {
+export function PlacePanel({ place, onClose, onDelete, onPlaceDataChanged }: PlacePanelProps) {
   const [lastAddedComment, setLastAddedComment] = useState<Comment | null>(null);
+
+  const handleCommentAdded = useCallback(
+    (comment: Comment) => {
+      setLastAddedComment(comment);
+      onPlaceDataChanged?.();
+    },
+    [onPlaceDataChanged]
+  );
 
   return (
     <div className="flex h-full flex-col overflow-hidden rounded-xl border border-[#3a3f46]/40 bg-[#292d32] shadow-lg">
@@ -30,6 +42,18 @@ export function PlacePanel({ place, onClose, onDelete }: PlacePanelProps) {
             <p className="mt-0.5 truncate text-xs text-zinc-300">
               {place.address}
             </p>
+          )}
+          {typeof place.ratingCount === "number" && place.ratingCount > 0 && (
+            <div className="mt-2 flex items-center gap-2">
+              <span className="text-sm text-yellow-400">
+                {"★".repeat(Math.round(place.averageRating ?? 0))}
+                {"☆".repeat(5 - Math.round(place.averageRating ?? 0))}
+              </span>
+              <span className="text-xs text-zinc-400">
+                {(place.averageRating ?? 0).toFixed(1)} / 5 ({place.ratingCount}{" "}
+                {place.ratingCount === 1 ? "оценка" : place.ratingCount < 5 ? "оценки" : "оценок"})
+              </span>
+            </div>
           )}
         </div>
         <div className="flex items-center gap-2">
@@ -70,6 +94,7 @@ export function PlacePanel({ place, onClose, onDelete }: PlacePanelProps) {
           <CommentsList
             placeId={place.id}
             newComment={lastAddedComment}
+            onCommentDeleted={onPlaceDataChanged}
           />
         </section>
         <section>
@@ -78,7 +103,7 @@ export function PlacePanel({ place, onClose, onDelete }: PlacePanelProps) {
           </h3>
           <CommentForm
             placeId={place.id}
-            onCommentAdded={setLastAddedComment}
+            onCommentAdded={handleCommentAdded}
           />
         </section>
       </div>

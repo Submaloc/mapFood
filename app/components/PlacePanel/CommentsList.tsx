@@ -6,6 +6,7 @@ import type { Comment } from "@/app/types/comment";
 type CommentsListProps = {
   placeId: number;
   newComment?: Comment | null;
+  onCommentDeleted?: () => void;
 };
 
 function formatDate(iso: string) {
@@ -23,10 +24,15 @@ function formatDate(iso: string) {
   }
 }
 
-export function CommentsList({ placeId, newComment }: CommentsListProps) {
+export function CommentsList({
+  placeId,
+  newComment,
+  onCommentDeleted,
+}: CommentsListProps) {
   const [comments, setComments] = useState<Comment[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<number | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -57,6 +63,23 @@ export function CommentsList({ placeId, newComment }: CommentsListProps) {
     }
   }, [newComment, placeId]);
 
+  async function handleDelete(commentId: number) {
+    if (!window.confirm("Удалить этот комментарий?")) return;
+    setDeletingId(commentId);
+    try {
+      const res = await fetch(`/api/comments?id=${commentId}`, {
+        method: "DELETE",
+      });
+      if (!res.ok) throw new Error("Не удалось удалить");
+      setComments((prev) => prev.filter((c) => c.id !== commentId));
+      onCommentDeleted?.();
+    } catch {
+      // ignore
+    } finally {
+      setDeletingId(null);
+    }
+  }
+
   if (loading) {
     return (
       <p className="text-sm text-zinc-500 dark:text-zinc-400">
@@ -82,8 +105,17 @@ export function CommentsList({ placeId, newComment }: CommentsListProps) {
       {comments.map((c) => (
         <li
           key={c.id}
-          className="rounded-lg border border-zinc-200 bg-zinc-50 p-3 dark:border-zinc-700 dark:bg-zinc-800/50"
+          className="relative rounded-lg border border-zinc-200 bg-zinc-50 p-3 pr-8 dark:border-zinc-700 dark:bg-zinc-800/50"
         >
+          <button
+            type="button"
+            onClick={() => handleDelete(c.id)}
+            disabled={deletingId === c.id}
+            className="absolute right-2 top-2 rounded p-1 text-zinc-400 hover:bg-zinc-200 hover:text-zinc-700 disabled:opacity-50 dark:hover:bg-zinc-700 dark:hover:text-zinc-200"
+            aria-label="Удалить комментарий"
+          >
+            ×
+          </button>
           <div className="flex items-center justify-between gap-2">
             <p className="font-medium text-zinc-900 dark:text-zinc-100">
               {c.authorName}

@@ -23,17 +23,26 @@ export default function Home() {
   const [error, setError] = useState<string | null>(null);
   const [syncing, setSyncing] = useState(false);
   const [syncMessage, setSyncMessage] = useState<string | null>(null);
+  const [minRating, setMinRating] = useState<number | null>(null);
 
-  const fetchPlaces = useCallback(async () => {
+  const filteredPlaces =
+    minRating != null
+      ? places.filter((p) => (p.averageRating ?? 0) >= minRating)
+      : places;
+
+  const fetchPlaces = useCallback(async (): Promise<PlaceListItem[]> => {
     try {
       const res = await fetch("/api/places");
       if (!res.ok) throw new Error("Не удалось загрузить места");
       const data = await res.json();
-      setPlaces(Array.isArray(data) ? data : []);
+      const list = Array.isArray(data) ? data : [];
+      setPlaces(list);
       setError(null);
+      return list;
     } catch (e) {
       setError(e instanceof Error ? e.message : "Ошибка загрузки");
       setPlaces([]);
+      return [];
     } finally {
       setLoading(false);
     }
@@ -42,6 +51,15 @@ export default function Home() {
   useEffect(() => {
     fetchPlaces();
   }, [fetchPlaces]);
+
+  useEffect(() => {
+    if (
+      selectedPlace &&
+      !filteredPlaces.some((p) => p.id === selectedPlace.id)
+    ) {
+      setSelectedPlace(null);
+    }
+  }, [minRating, filteredPlaces, selectedPlace]);
 
   const handleDeletePlace = useCallback(
     async (placeId: number) => {
@@ -110,8 +128,15 @@ export default function Home() {
           throw new Error(data.error ?? "Не удалось создать место");
         }
         // Добавляем новое место в список и выделяем его
-        setPlaces((prev) => [...prev, data]);
-        setSelectedPlace(data);
+        setPlaces((prev) => [
+          ...prev,
+          { ...data, averageRating: null, ratingCount: 0 },
+        ]);
+        setSelectedPlace({
+          ...data,
+          averageRating: null,
+          ratingCount: 0,
+        });
         setIsAddingPlace(false);
         setNewPlaceCoords(null);
       } catch (e) {
@@ -126,20 +151,59 @@ export default function Home() {
     setNewPlaceCoords(null);
   }, []);
 
+  const handlePlaceDataChanged = useCallback(async () => {
+    const list = await fetchPlaces();
+    setSelectedPlace((prev) =>
+      prev ? list.find((p) => p.id === prev.id) ?? prev : null
+    );
+  }, [fetchPlaces]);
+
   return (
     <div className="min-h-screen px-4 py-6">
       <div className="mx-auto flex max-w-6xl flex-col gap-4">
         <div className="rounded-2xl border border-zinc-200/40 bg-white/90 p-3 shadow-lg md:p-5">
           <div className="grid gap-4 md:grid-cols-[minmax(0,2fr)_minmax(320px,1fr)]">
             <main className="relative h-[360px] rounded-xl bg-zinc-100 md:h-[520px]">
-              <div className="pointer-events-none absolute left-14 top-3 z-[500] flex gap-2">
+              <div className="pointer-events-none absolute left-14 top-3 z-[500] flex flex-col gap-2">
+                <div className="pointer-events-auto flex flex-wrap items-center gap-1.5">
+                  <span className="mr-1 text-xs font-medium text-zinc-600">
+                    Рейтинг от:
+                  </span>
+                  {[1, 2, 3, 4, 5].map((star) => (
+                    <button
+                      key={star}
+                      type="button"
+                      onClick={() =>
+                        setMinRating((prev) => (prev === star ? null : star))
+                      }
+                      className={`rounded px-2 py-1 text-sm font-medium text-white shadow transition-colors ${
+                        minRating === star
+                          ? "bg-[#f44173]"
+                          : "bg-zinc-600 hover:bg-zinc-500"
+                      }`}
+                    >
+                      {star}★
+                    </button>
+                  ))}
+                  <button
+                    type="button"
+                    onClick={() => setMinRating(null)}
+                    className={`rounded px-2 py-1 text-sm font-medium shadow transition-colors ${
+                      minRating === null
+                        ? "bg-zinc-800 text-white"
+                        : "bg-zinc-200 text-zinc-700 hover:bg-zinc-300"
+                    }`}
+                  >
+                    Все
+                  </button>
+                </div>
                 <button
                   type="button"
                   onClick={() => {
                     setIsAddingPlace((prev) => !prev);
                     setNewPlaceCoords(null);
                   }}
-                  className={`pointer-events-auto flex h-9 items-center justify-center rounded-full px-3 text-sm font-medium text-white shadow-md transition-colors ${
+                  className={`pointer-events-auto flex h-9 w-fit items-center justify-center rounded-full px-3 text-sm font-medium text-white shadow-md transition-colors ${
                     isAddingPlace ? "bg-[#f44173]" : "bg-zinc-800"
                   }`}
                 >
@@ -169,7 +233,7 @@ export default function Home() {
                 </div>
               ) : (
                 <Map
-                  places={places}
+                  places={filteredPlaces}
                   onPlaceSelect={setSelectedPlace}
                   onMapClickForNewPlace={handleMapClickForNewPlace}
                 />
@@ -198,6 +262,7 @@ export default function Home() {
                     place={selectedPlace}
                     onClose={() => setSelectedPlace(null)}
                     onDelete={handleDeletePlace}
+                    onPlaceDataChanged={handlePlaceDataChanged}
                   />
                 </div>
               ) : (

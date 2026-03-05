@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import {
   createCommentForPlace,
+  deleteCommentById,
   getCommentsByPlace,
 } from "@/app/services/comment.service";
 
@@ -93,5 +94,32 @@ export async function POST(request: NextRequest) {
         : null,
   });
   return NextResponse.json(comment);
+}
+
+export async function DELETE(request: NextRequest) {
+  const id = request.nextUrl.searchParams.get("id");
+  if (!id) {
+    return NextResponse.json(
+      { error: "Comment id is required" },
+      { status: 400 }
+    );
+  }
+  const commentId = parseInt(id, 10);
+  if (Number.isNaN(commentId)) {
+    return NextResponse.json(
+      { error: "Invalid comment id" },
+      { status: 400 }
+    );
+  }
+  try {
+    await deleteCommentById(commentId);
+    return NextResponse.json({ ok: true });
+  } catch (e) {
+    const message = e instanceof Error ? e.message : String(e);
+    return NextResponse.json(
+      { error: "Failed to delete comment", details: message },
+      { status: 500 }
+    );
+  }
 }
 

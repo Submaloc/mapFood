@@ -22,6 +22,10 @@ export type PlaceListItem = {
   description: string | null;
   isManual?: boolean;
   _count?: { comments: number };
+  /** Средний рейтинг по комментариям (1–5), до одного знака */
+  averageRating?: number | null;
+  /** Количество оценок (комментариев с рейтингом) */
+  ratingCount?: number;
 };
 
 export type CommentInPlace = {

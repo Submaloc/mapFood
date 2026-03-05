@@ -27,3 +27,9 @@ export async function createCommentForPlace(params: CreateCommentParams) {
   });
 }
 
+export async function deleteCommentById(commentId: number) {
+  return prisma.comment.delete({
+    where: { id: commentId },
+  });
+}
+

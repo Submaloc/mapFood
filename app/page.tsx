@@ -174,6 +174,7 @@ export default function Home() {
                   <span className="mr-1 text-xs font-bold text-zinc-900">
                     Рейтинг от:
                   </span>
+                  {/* Рейтинг с цифрами
                   {[1, 2, 3, 4, 5].map((star) => (
                     <button
                       key={star}
@@ -190,6 +191,27 @@ export default function Home() {
                       {star}★
                     </button>
                   ))}
+                  */}
+                  <div className="flex items-center gap-1 rounded bg-zinc-600 px-2 py-1 shadow">
+                    {[1, 2, 3, 4, 5].map((star) => {
+                      const active = minRating !== null && minRating >= star;
+                      return (
+                        <button
+                          key={star}
+                          type="button"
+                          onClick={() => setMinRating(star)}
+                          className={`text-xl leading-none transition-colors ${
+                            active
+                              ? "text-yellow-300"
+                              : "text-zinc-300 hover:text-zinc-100"
+                          }`}
+                          aria-label={`Фильтр от ${star} звёзд`}
+                        >
+                          ★
+                        </button>
+                      );
+                    })}
+                  </div>
                   <button
                     type="button"
                     onClick={() => setMinRating(null)}

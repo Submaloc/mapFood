@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { deleteStoredCommentPhotoFiles } from "@/app/services/comment-photo-storage.service";
 
 const OVERPASS_URL = "https://overpass-api.de/api/interpreter";
 
@@ -123,7 +124,13 @@ export async function syncPlacesFromOverpass() {
 export async function getPlaceByIdWithComments(id: number) {
   return prisma.place.findUnique({
     where: { id },
-    include: { comments: true },
+    include: {
+      comments: {
+        include: {
+          photos: true,
+        },
+      },
+    },
   });
 }
 
@@ -181,9 +188,30 @@ export async function getPlacesForMap() {
 }
 
 export async function deletePlaceById(id: number) {
-  return prisma.place.delete({
+  const place = await prisma.place.findUnique({
+    where: { id },
+    include: {
+      comments: {
+        include: {
+          photos: true,
+        },
+      },
+    },
+  });
+
+  if (!place) {
+    throw new Error("Place not found");
+  }
+
+  const filePaths = place.comments.flatMap((comment) =>
+    comment.photos.map((photo) => photo.filePath)
+  );
+
+  await prisma.place.delete({
     where: { id },
   });
+
+  await deleteStoredCommentPhotoFiles(filePaths);
 }
 
 export async function createManualPlace(params: {

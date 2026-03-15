@@ -5,6 +5,10 @@ import {
   deleteCommentById,
   getCommentsByPlace,
 } from "@/app/services/comment.service";
+import {
+  deleteStoredCommentPhotoFiles,
+  saveCommentPhotoFiles,
+} from "@/app/services/comment-photo-storage.service";
 
 export async function GET(request: NextRequest) {
   const placeId = request.nextUrl.searchParams.get("placeId");
@@ -24,42 +28,48 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  let body: {
-    placeId: number;
-    authorName: string;
-    text?: string;
-    rating?: number | null;
-  };
+  let formData: FormData;
   try {
-    body = await request.json();
+    formData = await request.formData();
   } catch {
     return NextResponse.json(
-      { error: "Invalid JSON body" },
+      { error: "Invalid form data" },
       { status: 400 }
     );
   }
 
-  const { placeId, authorName, text, rating } = body;
-  if (
-    typeof placeId !== "number" ||
-    typeof authorName !== "string"
-  ) {
+  const placeIdValue = formData.get("placeId");
+  const authorNameValue = formData.get("authorName");
+  const textValue = formData.get("text");
+  const ratingValue = formData.get("rating");
+  const photoFiles = formData
+    .getAll("photos")
+    .filter((entry): entry is File => entry instanceof File && entry.size > 0);
+
+  const placeId =
+    typeof placeIdValue === "string" ? parseInt(placeIdValue, 10) : NaN;
+
+  if (Number.isNaN(placeId) || typeof authorNameValue !== "string") {
     return NextResponse.json(
       {
         error:
-          "placeId (number) и authorName (string) обязательны; text (string) и rating (number 1–5) — опциональны",
+          "placeId и authorName обязательны; text, rating и photos — опциональны",
       },
       { status: 400 }
     );
   }
 
-  const trimmedName = authorName.trim();
+  const trimmedName = authorNameValue.trim();
   const trimmedText =
-    typeof text === "string" ? text.trim() : "";
+    typeof textValue === "string" ? textValue.trim() : "";
+  const parsedRating =
+    typeof ratingValue === "string" && ratingValue !== ""
+      ? Number(ratingValue)
+      : null;
 
   const numericRating =
-    typeof rating === "number" && Number.isFinite(rating)
-      ? Math.round(rating)
+    parsedRating !== null && Number.isFinite(parsedRating)
+      ? Math.round(parsedRating)
       : null;
 
   if (!trimmedName) {
@@ -69,7 +79,10 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  if (!trimmedText && (numericRating === null || numericRating < 1 || numericRating > 5)) {
+  if (
+    !trimmedText &&
+    (numericRating === null || numericRating < 1 || numericRating > 5)
+  ) {
     return NextResponse.json(
       {
         error:
@@ -84,16 +97,31 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Place not found" }, { status: 404 });
   }
 
-  const comment = await createCommentForPlace({
-    placeId,
-    authorName: trimmedName,
-    text: trimmedText || null,
-    rating:
-      numericRating !== null && numericRating >= 1 && numericRating <= 5
-        ? numericRating
-        : null,
-  });
-  return NextResponse.json(comment);
+  let savedPhotos: Awaited<ReturnType<typeof saveCommentPhotoFiles>> = [];
+
+  try {
+    savedPhotos = await saveCommentPhotoFiles(photoFiles);
+
+    const comment = await createCommentForPlace({
+      placeId,
+      authorName: trimmedName,
+      text: trimmedText || null,
+      rating:
+        numericRating !== null && numericRating >= 1 && numericRating <= 5
+          ? numericRating
+          : null,
+      photos: savedPhotos,
+    });
+
+    return NextResponse.json(comment);
+  } catch (e) {
+    await deleteStoredCommentPhotoFiles(savedPhotos.map((photo) => photo.filePath));
+    const message = e instanceof Error ? e.message : String(e);
+    return NextResponse.json(
+      { error: message || "Не удалось сохранить комментарий" },
+      { status: 400 }
+    );
+  }
 }
 
 export async function DELETE(request: NextRequest) {

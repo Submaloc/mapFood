@@ -21,7 +21,7 @@ const MARKER_ICON_URLS = {
 
 export function MapMarkers({ places, onPlaceSelect }: MapMarkersProps) {
   const [icon, setIcon] = useState<L.Icon | null>(null);
-  const [officeIcon, setOfficeIcon] = useState<L.DivIcon | null>(null);
+  const [officeIcon, setOfficeIcon] = useState<L.Icon | null>(null);
 
   useEffect(() => {
     import("leaflet").then((L) => {
@@ -37,19 +37,11 @@ export function MapMarkers({ places, onPlaceSelect }: MapMarkersProps) {
         })
       );
       setOfficeIcon(
-        L.divIcon({
-          className: "office-marker-icon",
-          html: `<div style="
-            width: 32px;
-            height: 32px;
-            background: #f44173;
-            border: 3px solid white;
-            border-radius: 50%;
-            box-shadow: 0 2px 6px rgba(0,0,0,0.3);
-          " title="Офис"></div>`,
-          iconSize: [32, 32],
-          iconAnchor: [16, 16],
-          popupAnchor: [0, -16],
+        new L.Icon({
+          iconUrl: "/xbfavicon.png",
+          iconSize: [34, 34],
+          iconAnchor: [17, 17],
+          popupAnchor: [0, -18],
         })
       );
     });

@@ -34,12 +34,25 @@ model Place {
 }
 
 model Comment {
-  id         Int      @id @default(autoincrement())
+  id         Int            @id @default(autoincrement())
   placeId    Int
   authorName String
   text       String?
   rating     Int?
-  createdAt  DateTime @default(now())
+  createdAt  DateTime       @default(now())
 
-  place      Place    @relation(fields: [placeId], references: [id], onDelete: Cascade)
+  place      Place          @relation(fields: [placeId], references: [id], onDelete: Cascade)
+  photos     CommentPhoto[]
+}
+
+model CommentPhoto {
+  id         Int      @id @default(autoincrement())
+  commentId   Int
+  filePath    String
+  fileName    String
+  mimeType    String
+  size        Int
+  createdAt   DateTime @default(now())
+
+  comment     Comment  @relation(fields: [commentId], references: [id], onDelete: Cascade)
 }

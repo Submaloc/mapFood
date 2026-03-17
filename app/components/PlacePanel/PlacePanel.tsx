@@ -16,11 +16,18 @@ type PlacePanelProps = {
   place: PlaceForPanel;
   onClose?: () => void;
   onDelete?: (placeId: number) => void;
-  
+  // Флаг из внешней логики, который включает/выключает возможность удаления места.
+  canDeletePlace?: boolean;
   onPlaceDataChanged?: () => void | Promise<void>;
 };
 
-export function PlacePanel({ place, onClose, onDelete, onPlaceDataChanged }: PlacePanelProps) {
+export function PlacePanel({
+  place,
+  onClose,
+  onDelete,
+  canDeletePlace = true,
+  onPlaceDataChanged,
+}: PlacePanelProps) {
   const [lastAddedComment, setLastAddedComment] = useState<Comment | null>(null);
 
   const handleCommentAdded = useCallback(
@@ -61,7 +68,9 @@ export function PlacePanel({ place, onClose, onDelete, onPlaceDataChanged }: Pla
             <button
               type="button"
               onClick={() => {
+                // Удаление доступно только если флаг не выключен.
                 if (
+                  canDeletePlace &&
                   window.confirm(
                     "Удалить это место и все связанные комментарии/рейтинги?"
                   )
@@ -69,7 +78,8 @@ export function PlacePanel({ place, onClose, onDelete, onPlaceDataChanged }: Pla
                   onDelete(place.id);
                 }
               }}
-              className="rounded-lg bg-[#f44173] px-3 py-1 text-xs font-medium text-white shadow-sm transition-colors hover:bg-[#e03464]"
+              disabled={!canDeletePlace}
+              className="rounded-lg bg-[#f44173] px-3 py-1 text-xs font-medium text-white shadow-sm transition-colors hover:bg-[#e03464] disabled:opacity-50"
             >
               Удалить
             </button>

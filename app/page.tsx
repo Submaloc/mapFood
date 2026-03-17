@@ -24,6 +24,9 @@ export default function Home() {
   const [syncing, setSyncing] = useState(false);
   const [syncMessage, setSyncMessage] = useState<string | null>(null);
   const [minRating, setMinRating] = useState<number | null>(null);
+  // Флаги управления доступностью действий, читаются из localStorage в браузере.
+  const [canSyncPlaces, setCanSyncPlaces] = useState(false);
+  const [canDeletePlaces, setCanDeletePlaces] = useState(false);
 
   const filteredPlaces =
     minRating != null
@@ -49,6 +52,33 @@ export default function Home() {
   }, []);
 
   useEffect(() => {
+    // Читаем значения флагов из localStorage только на клиенте.
+    if (typeof window === "undefined") return;
+
+    try {
+      const rawSync = window.localStorage.getItem("mapfood_canSyncPlaces");
+      const rawDelete = window.localStorage.getItem("mapfood_canDeletePlaces");
+
+      // При первом заходе записываем стартовые значения из useState в localStorage.
+      if (rawSync === null) {
+        window.localStorage.setItem("mapfood_canSyncPlaces", String(canSyncPlaces));
+      }
+      if (rawDelete === null) {
+        window.localStorage.setItem("mapfood_canDeletePlaces", String(canDeletePlaces));
+      }
+
+      const effectiveSync = rawSync === null ? String(canSyncPlaces) : rawSync;
+      const effectiveDelete = rawDelete === null ? String(canDeletePlaces) : rawDelete;
+
+      // Преобразуем строки из localStorage в boolean-флаги.
+      setCanSyncPlaces(effectiveSync === "true");
+      setCanDeletePlaces(effectiveDelete === "true");
+    } catch {
+      // В случае ошибки чтения localStorage оставляем значения по умолчанию из useState.
+    }
+  }, [canSyncPlaces, canDeletePlaces]);
+
+  useEffect(() => {
     fetchPlaces();
   }, [fetchPlaces]);
 
@@ -63,6 +93,10 @@ export default function Home() {
 
   const handleDeletePlace = useCallback(
     async (placeId: number) => {
+      // Дополнительная проверка флага на случай ручного вызова функции.
+      if (!canDeletePlaces) {
+        return;
+      }
       try {
         const res = await fetch(`/api/places?id=${placeId}`, {
           method: "DELETE",
@@ -77,10 +111,14 @@ export default function Home() {
         setError(e instanceof Error ? e.message : "Ошибка удаления места");
       }
     },
-    []
+    [canDeletePlaces]
   );
 
   const runSync = useCallback(async () => {
+    // Если синхронизация выключена флагом, ничего не делаем.
+    if (!canSyncPlaces) {
+      return;
+    }
     setSyncing(true);
     setSyncMessage(null);
     try {
@@ -102,7 +140,7 @@ export default function Home() {
     } finally {
       setSyncing(false);
     }
-  }, [fetchPlaces]);
+  }, [fetchPlaces, canSyncPlaces]);
 
   const handleMapClickForNewPlace = useCallback(
     (lat: number, lng: number) => {
@@ -289,6 +327,8 @@ export default function Home() {
                     place={selectedPlace}
                     onClose={() => setSelectedPlace(null)}
                     onDelete={handleDeletePlace}
+                    // Флаг управляет доступностью кнопки удаления в панели.
+                    canDeletePlace={canDeletePlaces}
                     onPlaceDataChanged={handlePlaceDataChanged}
                   />
                 </div>
@@ -301,7 +341,8 @@ export default function Home() {
                     <button
                       type="button"
                       onClick={runSync}
-                      disabled={syncing}
+                      // Кнопка недоступна при активной синхронизации или выключенном флаге.
+                      disabled={syncing || !canSyncPlaces}
                       className="rounded-lg bg-[#f44173] px-4 py-2 text-sm font-medium text-white hover:bg-[#e03464] disabled:opacity-50"
                     >
                       {syncing ? "Загрузка…" : "Загрузить заведения с карты"}

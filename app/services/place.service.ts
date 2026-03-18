@@ -12,6 +12,13 @@ const MINSK_METRO_STATIONS = [
 
 const RADIUS_METERS = 800;
 
+// Координаты офиса
+const OFFICE = { lat: 53.899928, lon: 27.544233 } as const;
+
+
+// Примерно 900м по прямой ≈ 10–12 минут пешком в одну сторону.
+const OFFICE_RADIUS_METERS = 900;
+
 type OverpassElement = {
   type: string;
   id: number;
@@ -27,7 +34,7 @@ type OverpassResponse = {
 function buildOverpassQuery(): string {
   const parts = MINSK_METRO_STATIONS.map(
     (s) =>
-      `node["amenity"~"cafe|restaurant|fast_food|food_court"](around:${RADIUS_METERS},${s.lat},${s.lon});`
+      `node["amenity"~"^(cafe|restaurant|fast_food|food_court)$"](around:${RADIUS_METERS},${s.lat},${s.lon});`
   ).join("\n  ");
   return `
 [out:json][timeout:25];
@@ -47,6 +54,27 @@ function formatAddress(tags: Record<string, string> | undefined): string | null 
   if (parts.length === 0) return city ?? null;
   const line = parts.join(" ");
   return city ? `${line}, ${city}` : line;
+}
+
+function toRad(deg: number) {
+  return (deg * Math.PI) / 180;
+}
+
+function haversineMeters(a: { lat: number; lon: number }, b: { lat: number; lon: number }) {
+  // Фильтр доступности.
+  const R = 6371000; // радиус Земли в метрах
+  const dLat = toRad(b.lat - a.lat);
+  const dLon = toRad(b.lon - a.lon);
+  const lat1 = toRad(a.lat);
+  const lat2 = toRad(b.lat);
+
+  const sinDLat = Math.sin(dLat / 2);
+  const sinDLon = Math.sin(dLon / 2);
+  const h =
+    sinDLat * sinDLat +
+    Math.cos(lat1) * Math.cos(lat2) * sinDLon * sinDLon;
+
+  return 2 * R * Math.asin(Math.min(1, Math.sqrt(h)));
 }
 
 export async function fetchPlacesFromOverpass(): Promise<OverpassElement[]> {
@@ -74,6 +102,18 @@ export async function syncPlacesFromOverpass() {
 
   for (const el of elements) {
     if (el.type !== "node" || el.lat == null || el.lon == null) continue;
+
+  
+    // Новый способ:
+    // оставляем окружности станций как "генератор кандидатов", но дополнительно
+    // отсекаем слишком дальние от офиса места по радиусу OFFICE_RADIUS_METERS.
+    const distanceToOffice = haversineMeters(
+      { lat: el.lat, lon: el.lon },
+      OFFICE
+    );
+    if (distanceToOffice > OFFICE_RADIUS_METERS) {
+      continue;
+    }
 
     const externalId = `osm:${el.id}`;
     if (seen.has(externalId)) {
